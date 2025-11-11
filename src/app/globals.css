@@ -1,26 +1,29 @@
+/* =======================================================
+   📄 GLOBAL STYLES (Trasari UI)
+   Define estilos globales para todo el proyecto
+   ======================================================= */
 @import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* 🧩 Fuente global y fondo por defecto */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply font-sans bg-slate-50 text-slate-800;
 }
+
+/* 🌙 Modo oscuro (se activa agregando la clase .dark al <html>) */
+.dark body {
+  @apply bg-slate-900 text-slate-100;
+}
+
+
+/* 🪶 Variables CSS opcionales (por si las usas en CSS puro) */
+:root {
+  --color-brand: #1e293b;
+  --radius-base: 0.75rem;
+}
+
+
+
+

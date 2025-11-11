@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="48" viewBox="0 0 120 48" fill="none">
+  <!-- Fondo gris muy claro (resalta sobre fondo oscuro) -->
+  <rect width="120" height="48" rx="8" fill="#f1f5f9"></rect>
+  
+  <!-- Letras VB, más delgadas y centradas -->
+  <text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-family="Inter, sans-serif" font-size="26" font-weight="600" fill="#000000">
+    VB
+  </text>
+</svg>
