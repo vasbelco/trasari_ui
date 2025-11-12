@@ -1,0 +1,69 @@
+/* ==========================================================
+   003_invites.sql — Tabla de invitaciones (MVP Trasari)
+   Objetivo:
+   - Permitir que el owner/admin invite usuarios por email.
+   - Guardar token (en hash), expiración y estado de la invitación.
+   - NO incluye RLS aún (se hará en el siguiente paso).
+   ========================================================== */
+
+-- 1) Crear tabla invites
+CREATE TABLE IF NOT EXISTS public.invites (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- Empresa a la que pertenece la invitación
+  company_id   uuid NOT NULL
+               REFERENCES public.companies(id)
+               ON DELETE CASCADE,
+
+  -- Email del invitado (obligatorio). Puede ser personal o corporativo.
+  email        text NOT NULL
+               CHECK (email ~* '^[^@]+@[^@]+\.[^@]+$'),
+
+  -- Rol que tendrá el invitado al aceptar (usa enum existente user_role)
+  role         public.user_role NOT NULL DEFAULT 'operator',
+
+  -- Token almacenado en HASH (NUNCA el token plano)
+  -- Se usará para validar/consumir la invitación.
+  token_hash   text NOT NULL UNIQUE,
+
+  -- Fecha/hora de expiración de la invitación
+  expires_at   timestamptz NOT NULL,
+
+  -- Fecha/hora en que se usó (redimida). NULL si aún no se usa.
+  used_at      timestamptz,
+
+  -- Estado de la invitación (control simple)
+  status       text NOT NULL DEFAULT 'pending'
+               CHECK (status IN ('pending','used','revoked','expired')),
+
+  -- Quién creó la invitación (usuario interno de la app)
+  created_by   uuid
+               REFERENCES public.app_users(id),
+
+  created_at   timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE  public.invites IS 'Invitaciones para alta de usuarios por empresa.';
+COMMENT ON COLUMN public.invites.token_hash IS 'Token en hash (ej. SHA-256). Nunca guardar el token plano.';
+COMMENT ON COLUMN public.invites.status IS 'pending|used|revoked|expired. "expired" puede setearse por job/cron.';
+
+
+-- 2) Índices útiles
+--    - Búsqueda por empresa/estado
+--    - Limpieza por expiración
+CREATE INDEX IF NOT EXISTS idx_invites_company   ON public.invites(company_id);
+CREATE INDEX IF NOT EXISTS idx_invites_status    ON public.invites(status);
+CREATE INDEX IF NOT EXISTS idx_invites_expires   ON public.invites(expires_at);
+
+
+-- 3) (Opcional) Helper para marcar expiradas automáticamente en lecturas
+--    Puedes usar un job/cron externo; aquí solo dejamos la nota.
+--    UPDATE public.invites SET status='expired'
+--    WHERE status='pending' AND now() > expires_at;
+
+
+-- 4) Verificación rápida (manual)
+-- SELECT id, company_id, email, role, status, expires_at, used_at
+-- FROM public.invites
+-- ORDER BY created_at DESC
+-- LIMIT 10;

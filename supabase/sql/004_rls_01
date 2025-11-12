@@ -1,0 +1,216 @@
+/* ============================================
+   RLS — Fase 1 (sin JWT custom)
+   Requisitos previos:
+   - app_users.auth_uid vincula con auth.users.id
+   - companies.id → app_users.company_id
+   ============================================ */
+
+-- 0) Activar RLS en tablas
+ALTER TABLE public.companies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.invites  ENABLE ROW LEVEL SECURITY;
+
+-- (Opcional recomendado) bloquear por defecto
+ALTER TABLE public.companies FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.app_users FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.invites  FORCE ROW LEVEL SECURITY;
+
+------------------------------------------------------------
+-- HELPER: condición base (el usuario autenticado en su fila)
+-- Usaremos EXISTS con auth.uid() en cada política.
+-- Nota: auth.uid() solo está disponible para 'authenticated'.
+------------------------------------------------------------
+
+/* ======================
+   POLÍTICAS: companies
+   ====================== */
+
+-- SELECT: cualquiera autenticado puede ver SOLO su empresa
+DROP POLICY IF EXISTS "companies_select_same_company" ON public.companies;
+CREATE POLICY "companies_select_same_company"
+ON public.companies
+FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1
+    FROM public.app_users u
+    WHERE u.auth_uid = auth.uid()
+      AND u.company_id = companies.id
+      AND u.status = 'active'
+  )
+);
+
+-- UPDATE: solo OWNER de esa empresa
+DROP POLICY IF EXISTS "companies_update_owner_only" ON public.companies;
+CREATE POLICY "companies_update_owner_only"
+ON public.companies
+FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1
+    FROM public.app_users u
+    WHERE u.auth_uid = auth.uid()
+      AND u.company_id = companies.id
+      AND u.role = 'owner'
+      AND u.status = 'active'
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1
+    FROM public.app_users u
+    WHERE u.auth_uid = auth.uid()
+      AND u.company_id = companies.id
+      AND u.role = 'owner'
+      AND u.status = 'active'
+  )
+);
+
+-- INSERT/DELETE: no se permiten desde cliente (service_role backend)
+REVOKE INSERT, DELETE ON public.companies FROM anon, authenticated;
+
+/* ======================
+   POLÍTICAS: app_users
+   ====================== */
+
+-- SELECT: ver tu fila y (si eres owner/admin) los usuarios de tu empresa
+DROP POLICY IF EXISTS "app_users_select_self_or_company_by_admin" ON public.app_users;
+CREATE POLICY "app_users_select_self_or_company_by_admin"
+ON public.app_users
+FOR SELECT
+USING (
+  -- tu propia fila
+  auth.uid() = app_users.auth_uid
+  OR
+  -- o eres owner/admin de la misma empresa
+  EXISTS (
+    SELECT 1
+    FROM public.app_users me
+    WHERE me.auth_uid = auth.uid()
+      AND me.company_id = app_users.company_id
+      AND me.role IN ('owner','super_admin','admin')
+      AND me.status = 'active'
+  )
+);
+
+-- UPDATE: cada usuario SOLO su propia fila
+DROP POLICY IF EXISTS "app_users_update_self" ON public.app_users;
+CREATE POLICY "app_users_update_self"
+ON public.app_users
+FOR UPDATE
+USING (auth.uid() = app_users.auth_uid)
+WITH CHECK (auth.uid() = app_users.auth_uid);
+
+-- (Opcional) UPDATE por owner/admin sobre otros (ej. reset de estado/rol)
+DROP POLICY IF EXISTS "app_users_update_by_admin_same_company" ON public.app_users;
+CREATE POLICY "app_users_update_by_admin_same_company"
+ON public.app_users
+FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1
+    FROM public.app_users me
+    WHERE me.auth_uid = auth.uid()
+      AND me.company_id = app_users.company_id
+      AND me.role IN ('owner','super_admin','admin')
+      AND me.status = 'active'
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1
+    FROM public.app_users me
+    WHERE me.auth_uid = auth.uid()
+      AND me.company_id = app_users.company_id
+      AND me.role IN ('owner','super_admin','admin')
+      AND me.status = 'active'
+  )
+);
+
+-- INSERT/DELETE: solo backend (service_role)
+REVOKE INSERT, DELETE ON public.app_users FROM anon, authenticated;
+
+/* ======================
+   POLÍTICAS: invites
+   ====================== */
+
+-- SELECT: owner/admin de la misma empresa
+DROP POLICY IF EXISTS "invites_select_by_admin_same_company" ON public.invites;
+CREATE POLICY "invites_select_by_admin_same_company"
+ON public.invites
+FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1
+    FROM public.app_users me
+    WHERE me.auth_uid = auth.uid()
+      AND me.company_id = invites.company_id
+      AND me.role IN ('owner','super_admin','admin')
+      AND me.status = 'active'
+  )
+);
+
+-- INSERT: owner/admin de la misma empresa
+DROP POLICY IF EXISTS "invites_insert_by_admin_same_company" ON public.invites;
+CREATE POLICY "invites_insert_by_admin_same_company"
+ON public.invites
+FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1
+    FROM public.app_users me
+    WHERE me.auth_uid = auth.uid()
+      AND me.company_id = invites.company_id
+      AND me.role IN ('owner','super_admin','admin')
+      AND me.status = 'active'
+  )
+);
+
+-- UPDATE: owner/admin de la misma empresa
+DROP POLICY IF EXISTS "invites_update_by_admin_same_company" ON public.invites;
+CREATE POLICY "invites_update_by_admin_same_company"
+ON public.invites
+FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1
+    FROM public.app_users me
+    WHERE me.auth_uid = auth.uid()
+      AND me.company_id = invites.company_id
+      AND me.role IN ('owner','super_admin','admin')
+      AND me.status = 'active'
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1
+    FROM public.app_users me
+    WHERE me.auth_uid = auth.uid()
+      AND me.company_id = invites.company_id
+      AND me.role IN ('owner','super_admin','admin')
+      AND me.status = 'active'
+  )
+);
+
+-- DELETE: owner/admin de la misma empresa
+DROP POLICY IF EXISTS "invites_delete_by_admin_same_company" ON public.invites;
+CREATE POLICY "invites_delete_by_admin_same_company"
+ON public.invites
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1
+    FROM public.app_users me
+    WHERE me.auth_uid = auth.uid()
+      AND me.company_id = invites.company_id
+      AND me.role IN ('owner','super_admin','admin')
+      AND me.status = 'active'
+  )
+);
+
+
+-- INSERT/UPDATE/DELETE por cliente anónimo (redimir token) -> NO aquí.
+-- Se hará luego con una RPC específica y política para 'anon'.
+
+-- Asegurar que sin RLS no se puedan crear/alterar invites:
+REVOKE INSERT, UPDATE, DELETE ON public.invites FROM anon, authenticated;

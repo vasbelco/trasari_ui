@@ -390,3 +390,6 @@ BEGIN
   END IF;
 END$$;
 
+-- se cambio columna slug a companie_code en tabal companies
+ALTER TABLE public.companies RENAME COLUMN slug TO companie_code;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_companies_companie_code ON public.companies (companie_code);
