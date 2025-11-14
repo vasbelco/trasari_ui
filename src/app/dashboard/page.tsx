@@ -1,13 +1,27 @@
-// src/app/dashboard/page.tsx (actualizado con soporte de iconos lucide-react)
+// src/app/dashboard/page.tsx (actualizado con sidebar responsive)
 // Dashboard básico de Vasbel
 // - Layout con sidebar + header + contenido
 // - Muestra datos simples del usuario (nombre, email, rol, empresa)
 // - Sin lógica real de auth todavía: aquí todo es dummy para pruebas de UI
+"use client";
 import Image from "next/image";
-import type { ReactNode } from "react";
 import logo from "@/assets/logo.svg";
+
 // Íconos lucide-react
-import { Home, FolderKanban, Wrench, Users, Building2, Settings, UserCog, LogOut } from "lucide-react";
+import {
+  Home,
+  FolderKanban,
+  Wrench,
+  Users,
+  Building2,
+  Settings,
+  UserCog,
+  LogOut,
+  Menu,
+  X,
+} from "lucide-react";
+
+import { useState, type ReactNode } from "react";
 
 type Role = "owner" | "company_admin" | "site_manager" | "viewer";
 
@@ -36,122 +50,65 @@ export default function DashboardPage() {
   const isOwnerOrAdmin =
     user.role === "owner" || user.role === "company_admin";
 
+  // 💡 Controla si el sidebar móvil (drawer) está abierto o cerrado
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
   return (
     // 💡 COLOR FONDO GENERAL DE LA PÁGINA
     // Cambia bg-slate-100 por el que uses en las demás páginas (ej. bg-slate-50 o bg-neutral-100)
     <div className="min-h-screen flex bg-slate-100">
-      {/* =============== SIDEBAR =============== */}
-      {/* 💡 COLOR / ESTILO DEL SIDEBAR:
-          - bg-slate-700: fondo gris oscuro (adaptado a tu tema actual)
-          - text-slate-100: texto claro
-          Cambia estas clases para que coincida con tu tema. */}
-      <aside className="flex flex-col w-64 bg-slate-700 text-slate-100">
-        {/* Zona superior: logo + nombre de la app */}
-        <div className="h-16 flex items-center px-6 border-b border-slate-800">
-          {/* 🔹 ESPACIO PARA EL LOGO */}
-          <div className="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center mr-3">
-            {/* Aquí va tu logo real */}
-            <Image
-              src={logo}
-              alt="Logo Vasbel"
-              width={120}
-              height={32}
-              className="object-contain"
-            />
-          </div>
+      {/* =============== SIDEBAR DESKTOP (FIJO) =============== */}
+      {/* Solo se muestra en pantallas medianas en adelante */}
+      <aside className="hidden md:flex flex-col w-64 bg-slate-700 text-slate-100">
+        <SidebarContent user={user} isOwnerOrAdmin={isOwnerOrAdmin} />
+      </aside>
 
-          {/* Nombre de la app */}
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold tracking-wide">Vasbel</span>
-            <span className="text-xs text-slate-200">Gestión de proyectos</span>
-          </div>
-        </div>
-
-        {/* Bloque: estado de la empresa (solo owner / admin) */}
-        {isOwnerOrAdmin && (
-          <div className="px-6 py-4 border-b border-slate-800">
-            <p className="text-xs uppercase tracking-wide text-slate-300 mb-1">
-              Empresa
-            </p>
-            <p className="text-sm font-semibold truncate mb-2">
-              {user.companyName}
-            </p>
-
-            {/* 🔹 Botón de estado de la empresa
-                Cambia colores según quieras: 
-                - bg-emerald-500 / bg-rose-500
-                - text-emerald-50 / text-rose-50 */}
-            <button
-              type="button"
-              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                user.companyStatus === "activa"
-                  ? "bg-emerald-500 text-emerald-50"
-                  : "bg-rose-500 text-rose-50"
-              }`}
-            >
-              <span
-                className={`w-2 h-2 rounded-full mr-2 ${
-                  user.companyStatus === "activa"
-                    ? "bg-emerald-100"
-                    : "bg-rose-100"
-                }`}
-              />
-              {user.companyStatus === "activa" ? "Empresa activa" : "Empresa inactiva"}
-            </button>
-          </div>
-        )}
-
-        {/* Navegación principal del sidebar */}
-        {/* 💡 Aquí defines el orden de los ítems y sus iconos.
-            Puedes jugar con tamaño, padding y colores (hover, active, etc.). */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {/* Item: Dashboard (activo por defecto) */}
-          <SidebarItem label="Dashboard" active icon={<Home size={18} />} />
-
-          {/* Sección principal */}
-          <SidebarItem label="Proyectos" icon={<FolderKanban size={18} />} />
-          <SidebarItem label="Equipos" icon={<Wrench size={18} />} />
-          <SidebarItem label="Trabajadores" icon={<Users size={18} />} />
-
-          {/* Separador visual */}
-          <p className="mt-4 mb-2 text-[11px] uppercase tracking-wide text-slate-400 px-2">
-            Administración
-          </p>
-
-          {/* Items visibles solo para owner/admin (a nivel lógico más adelante) */}
-          <SidebarItem label="Empresa" icon={<Building2 size={18} />} />
-          <SidebarItem label="Usuarios del sistema" icon={<UserCog size={18} />} />
-
-          <p className="mt-4 mb-2 text-[11px] uppercase tracking-wide text-slate-400 px-2">
-            Cuenta
-          </p>
-
-          <SidebarItem label="Mi cuenta" icon={<Settings size={18} />} />
-        </nav>
-
-        {/* =============== BOTÓN / TARJETA DE SALIDA (ABAJO) =============== */}
-        {/* 💡 Este bloque queda fijo al final del sidebar. */}
-        <div className="p-4 border-t border-slate-800">
+      {/* =============== SIDEBAR MÓVIL (DRAWER) =============== */}
+      {/* Solo se muestra en móvil cuando isMobileSidebarOpen = true */}
+      {isMobileSidebarOpen && (
+        <div className="fixed inset-0 z-40 flex md:hidden">
+          {/* Fondo oscuro clickeable para cerrar */}
           <button
             type="button"
-            className="w-full inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 text-slate-700 hover:opacity-80 transition"
-          >
-            {/* Aquí podrías poner un icono de logout */}
-            <LogOut size={16} className="mr-2" /> Cerrar sesión
-          </button>
+            className="flex-1 bg-black/40"
+            onClick={() => setIsMobileSidebarOpen(false)}
+            aria-label="Cerrar menú lateral"
+          />
+
+          {/* Panel lateral */}
+          <div className="relative w-64 max-w-full h-full bg-slate-700 text-slate-100 shadow-xl">
+            <SidebarContent
+              user={user}
+              isOwnerOrAdmin={isOwnerOrAdmin}
+              showCloseButton
+              onCloseMobileSidebar={() => setIsMobileSidebarOpen(false)}
+            />
+          </div>
         </div>
-      </aside>
+      )}
 
       {/* =============== ZONA PRINCIPAL (HEADER + CONTENIDO) =============== */}
       <div className="flex-1 flex flex-col">
         {/* HEADER SUPERIOR */}
         {/* 💡 Cambia bg-white / shadow-sm si quieres un header más plano o más marcado. */}
-        <header className="h-16 flex items-center justify-between px-6 bg-white border-b border-slate-200 shadow-sm">
-          <div>
-            <p className="text-sm text-slate-500">Dashboard</p>
-            <h1 className="text-lg font-semibold text-slate-900">
-              Bienvenido, {user.name.split(" ")[0]}
-            </h1>
+        <header className="h-16 flex items-center justify-between px-4 sm:px-6 bg-white border-b border-slate-200 shadow-sm">
+          <div className="flex items-center gap-3">
+            {/* Botón hamburguesa: solo se muestra en móvil */}
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-md p-2 text-slate-600 hover:bg-slate-100 md:hidden"
+              onClick={() => setIsMobileSidebarOpen(true)}
+              aria-label="Abrir menú lateral"
+            >
+              <Menu size={20} />
+            </button>
+
+            <div>
+              <p className="text-sm text-slate-500">Dashboard</p>
+              <h1 className="text-lg font-semibold text-slate-900">
+                Bienvenido, {user.name.split(" ")[0]}
+              </h1>
+            </div>
           </div>
 
           {/* Área futura para botones rápidos, notificaciones, etc. */}
@@ -165,7 +122,7 @@ export default function DashboardPage() {
 
         {/* CONTENIDO PRINCIPAL */}
         {/* 💡 Fondo del contenido: cambia bg-slate-200 si quieres otro gris o blanco puro. */}
-        <main className="flex-1 bg-slate-200 px-6 py-6">
+        <main className="flex-1 bg-slate-200 px-4 sm:px-6 py-6">
           {/* Contenedor central del dashboard */}
           {/* max-w-5xl limita el ancho; puedes quitarlo para usar todo el ancho. */}
           <div className="max-w-5xl mx-auto">
@@ -226,6 +183,137 @@ export default function DashboardPage() {
             </section>
           </div>
         </main>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Contenido del sidebar.
+ * Se reutiliza tanto en desktop como en móvil.
+ */
+interface SidebarContentProps {
+  user: UserInfo;
+  isOwnerOrAdmin: boolean;
+  showCloseButton?: boolean;
+  onCloseMobileSidebar?: () => void;
+}
+
+function SidebarContent({
+  user,
+  isOwnerOrAdmin,
+  showCloseButton = false,
+  onCloseMobileSidebar,
+}: SidebarContentProps) {
+  return (
+    <div className="flex flex-col h-full">
+      {/* Zona superior: logo + nombre de la app */}
+      <div className="h-16 flex items-center px-6 border-b border-slate-800">
+        {/* 🔹 ESPACIO PARA EL LOGO */}
+        <div className="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center mr-3">
+          {/* Aquí va tu logo real */}
+          <Image
+            src={logo}
+            alt="Logo Vasbel"
+            width={120}
+            height={32}
+            className="object-contain"
+          />
+        </div>
+
+        {/* Nombre de la app */}
+        <div className="flex flex-col">
+          <span className="text-sm font-semibold tracking-wide">Vasbel</span>
+          <span className="text-xs text-slate-200">Gestión de proyectos</span>
+        </div>
+
+        {/* Botón de cierre solo en móvil (drawer) */}
+        {showCloseButton && onCloseMobileSidebar && (
+          <button
+            type="button"
+            className="ml-auto inline-flex items-center justify-center rounded-md p-1 text-slate-200 hover:bg-slate-600 md:hidden"
+            onClick={onCloseMobileSidebar}
+            aria-label="Cerrar menú lateral"
+          >
+            <X size={18} />
+          </button>
+        )}
+      </div>
+
+      {/* Bloque: estado de la empresa (solo owner / admin) */}
+      {isOwnerOrAdmin && (
+        <div className="px-6 py-4 border-b border-slate-800">
+          <p className="text-xs uppercase tracking-wide text-slate-300 mb-1">
+            Empresa
+          </p>
+          <p className="text-sm font-semibold truncate mb-2">
+            {user.companyName}
+          </p>
+
+          {/* 🔹 Botón de estado de la empresa
+              Cambia colores según quieras: 
+              - bg-emerald-500 / bg-rose-500
+              - text-emerald-50 / text-rose-50 */}
+          <button
+            type="button"
+            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+              user.companyStatus === "activa"
+                ? "bg-emerald-500 text-emerald-50"
+                : "bg-rose-500 text-rose-50"
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full mr-2 ${
+                user.companyStatus === "activa"
+                  ? "bg-emerald-100"
+                  : "bg-rose-100"
+              }`}
+            />
+            {user.companyStatus === "activa"
+              ? "Empresa activa"
+              : "Empresa inactiva"}
+          </button>
+        </div>
+      )}
+
+      {/* Navegación principal del sidebar */}
+      {/* 💡 Aquí defines el orden de los ítems y sus iconos.
+          Puedes jugar con tamaño, padding y colores (hover, active, etc.). */}
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        {/* Item: Dashboard (activo por defecto) */}
+        <SidebarItem label="Dashboard" active icon={<Home size={18} />} />
+
+        {/* Sección principal */}
+        <SidebarItem label="Proyectos" icon={<FolderKanban size={18} />} />
+        <SidebarItem label="Equipos" icon={<Wrench size={18} />} />
+        <SidebarItem label="Trabajadores" icon={<Users size={18} />} />
+
+        {/* Separador visual */}
+        <p className="mt-4 mb-2 text-[11px] uppercase tracking-wide text-slate-400 px-2">
+          Administración
+        </p>
+
+        {/* Items visibles solo para owner/admin (a nivel lógico más adelante) */}
+        <SidebarItem label="Empresa" icon={<Building2 size={18} />} />
+        <SidebarItem label="Usuarios del sistema" icon={<UserCog size={18} />} />
+
+        <p className="mt-4 mb-2 text-[11px] uppercase tracking-wide text-slate-400 px-2">
+          Cuenta
+        </p>
+
+        <SidebarItem label="Mi cuenta" icon={<Settings size={18} />} />
+      </nav>
+
+      {/* =============== BOTÓN / TARJETA DE SALIDA (ABAJO) =============== */}
+      {/* 💡 Este bloque queda fijo al final del sidebar. */}
+      <div className="p-4 border-t border-slate-800">
+        <button
+          type="button"
+          className="w-full inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 text-slate-700 hover:opacity-80 transition"
+        >
+          <LogOut size={16} className="mr-2" />
+          Cerrar sesión
+        </button>
       </div>
     </div>
   );
