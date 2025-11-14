@@ -1,12 +1,15 @@
-// src/app/dashboard/page.tsx
-// Dashboard básico de Basbel/Vasbel
+// src/app/dashboard/page.tsx (actualizado con soporte de iconos lucide-react)
+// Dashboard básico de Vasbel
 // - Layout con sidebar + header + contenido
 // - Muestra datos simples del usuario (nombre, email, rol, empresa)
 // - Sin lógica real de auth todavía: aquí todo es dummy para pruebas de UI
 import Image from "next/image";
+import type { ReactNode } from "react";
 import logo from "@/assets/logo.svg";
+// Íconos lucide-react
+import { Home, FolderKanban, Wrench, Users, Building2, Settings, UserCog, LogOut } from "lucide-react";
 
-type Role = "owner" | "admin_empresa" | "encargado_obra" | "consulta";
+type Role = "owner" | "company_admin" | "site_manager" | "viewer";
 
 interface UserInfo {
   name: string;
@@ -29,8 +32,9 @@ const MOCK_USER: UserInfo = {
 export default function DashboardPage() {
   const user = MOCK_USER;
 
+  // 💡 Lógica para saber si el usuario es owner o admin de empresa
   const isOwnerOrAdmin =
-    user.role === "owner" || user.role === "admin_empresa";
+    user.role === "owner" || user.role === "company_admin";
 
   return (
     // 💡 COLOR FONDO GENERAL DE LA PÁGINA
@@ -38,40 +42,35 @@ export default function DashboardPage() {
     <div className="min-h-screen flex bg-slate-100">
       {/* =============== SIDEBAR =============== */}
       {/* 💡 COLOR / ESTILO DEL SIDEBAR:
-          - bg-slate-900: fondo oscuro
+          - bg-slate-700: fondo gris oscuro (adaptado a tu tema actual)
           - text-slate-100: texto claro
           Cambia estas clases para que coincida con tu tema. */}
       <aside className="flex flex-col w-64 bg-slate-700 text-slate-100">
         {/* Zona superior: logo + nombre de la app */}
         <div className="h-16 flex items-center px-6 border-b border-slate-800">
-
-          {/* 🔹 ESPACIO PARA EL LOGO  */}
+          {/* 🔹 ESPACIO PARA EL LOGO */}
           <div className="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center mr-3">
-            {/* Aquí va tu logo */}
-                <Image
-                src={logo}
-                alt="Logo Vasbel"
-                width={120}
-                height={32}
-                className="object-contain"
-                />
+            {/* Aquí va tu logo real */}
+            <Image
+              src={logo}
+              alt="Logo Vasbel"
+              width={120}
+              height={32}
+              className="object-contain"
+            />
           </div>
 
           {/* Nombre de la app */}
           <div className="flex flex-col">
-            <span className="text-sm font-semibold tracking-wide">
-              Vasbel
-            </span>
-            <span className="text-xs text-slate-400">
-              Gestión de proyectos
-            </span>
+            <span className="text-sm font-semibold tracking-wide">Vasbel</span>
+            <span className="text-xs text-slate-200">Gestión de proyectos</span>
           </div>
         </div>
 
         {/* Bloque: estado de la empresa (solo owner / admin) */}
         {isOwnerOrAdmin && (
           <div className="px-6 py-4 border-b border-slate-800">
-            <p className="text-xs uppercase tracking-wide text-slate-400 mb-1">
+            <p className="text-xs uppercase tracking-wide text-slate-300 mb-1">
               Empresa
             </p>
             <p className="text-sm font-semibold truncate mb-2">
@@ -97,7 +96,7 @@ export default function DashboardPage() {
                     : "bg-rose-100"
                 }`}
               />
-              {user.companyStatus === "activa" ? "Empresa activa" : "Inactiva"}
+              {user.companyStatus === "activa" ? "Empresa activa" : "Empresa inactiva"}
             </button>
           </div>
         )}
@@ -107,26 +106,27 @@ export default function DashboardPage() {
             Puedes jugar con tamaño, padding y colores (hover, active, etc.). */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {/* Item: Dashboard (activo por defecto) */}
-          <SidebarItem label="Dashboard" active />
+          <SidebarItem label="Dashboard" active icon={<Home size={18} />} />
 
-          <SidebarItem label="Proyectos" />
-          <SidebarItem label="Equipos" />
-          <SidebarItem label="Trabajadores" />
+          {/* Sección principal */}
+          <SidebarItem label="Proyectos" icon={<FolderKanban size={18} />} />
+          <SidebarItem label="Equipos" icon={<Wrench size={18} />} />
+          <SidebarItem label="Trabajadores" icon={<Users size={18} />} />
 
           {/* Separador visual */}
-          <p className="mt-4 mb-2 text-[11px] uppercase tracking-wide text-slate-500 px-2">
+          <p className="mt-4 mb-2 text-[11px] uppercase tracking-wide text-slate-400 px-2">
             Administración
           </p>
 
-          {/* Estos idealmente solo visibles para owner/admin a nivel lógico */}
-          <SidebarItem label="Empresa" />
-          <SidebarItem label="Usuarios del sistema" />
+          {/* Items visibles solo para owner/admin (a nivel lógico más adelante) */}
+          <SidebarItem label="Empresa" icon={<Building2 size={18} />} />
+          <SidebarItem label="Usuarios del sistema" icon={<UserCog size={18} />} />
 
-          <p className="mt-4 mb-2 text-[11px] uppercase tracking-wide text-slate-500 px-2">
+          <p className="mt-4 mb-2 text-[11px] uppercase tracking-wide text-slate-400 px-2">
             Cuenta
           </p>
 
-          <SidebarItem label="Mi cuenta" />
+          <SidebarItem label="Mi cuenta" icon={<Settings size={18} />} />
         </nav>
 
         {/* =============== BOTÓN / TARJETA DE SALIDA (ABAJO) =============== */}
@@ -137,7 +137,7 @@ export default function DashboardPage() {
             className="w-full inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 text-slate-700 hover:opacity-80 transition"
           >
             {/* Aquí podrías poner un icono de logout */}
-            Cerrar sesión
+            <LogOut size={16} className="mr-2" /> Cerrar sesión
           </button>
         </div>
       </aside>
@@ -164,7 +164,7 @@ export default function DashboardPage() {
         </header>
 
         {/* CONTENIDO PRINCIPAL */}
-        {/* 💡 Fondo del contenido: cambia bg-slate-50 si quieres otro gris o blanco puro. */}
+        {/* 💡 Fondo del contenido: cambia bg-slate-200 si quieres otro gris o blanco puro. */}
         <main className="flex-1 bg-slate-200 px-6 py-6">
           {/* Contenedor central del dashboard */}
           {/* max-w-5xl limita el ancho; puedes quitarlo para usar todo el ancho. */}
@@ -176,8 +176,8 @@ export default function DashboardPage() {
                 Información del usuario (MVP)
               </h2>
               <p className="text-sm text-slate-500 mb-4">
-                Estos datos vienen del usuario autenticado. Más adelante aquí
-                se mostrarán tarjetas y gráficos según el rol.
+                Estos valores vendrán del usuario autenticado. Más adelante esta
+                zona se reemplazará por tarjetas y gráficos según el rol.
               </p>
 
               {/* Grid simple para mostrar campos */}
@@ -189,19 +189,17 @@ export default function DashboardPage() {
 
                 <div>
                   <dt className="text-slate-500">Email</dt>
-                  <dd className="font-medium text-slate-900">
-                    {user.email}
-                  </dd>
+                  <dd className="font-medium text-slate-900">{user.email}</dd>
                 </div>
 
                 <div>
                   <dt className="text-slate-500">Rol</dt>
                   <dd className="font-medium text-slate-900">
-                    {/* Puedes mapear estos valores a textos más “bonitos” si quieres */}
-                    {user.role === "owner" && "Owner / Dueño"}
-                    {user.role === "admin_empresa" && "Admin empresa"}
-                    {user.role === "encargado_obra" && "Encargado de proyecto"}
-                    {user.role === "consulta" && "Consulta"}
+                    {/* Mapeo de los valores internos del rol a etiquetas legibles */}
+                    {user.role === "owner" && "Owner"}
+                    {user.role === "company_admin" && "Company admin"}
+                    {user.role === "site_manager" && "Site manager"}
+                    {user.role === "viewer" && "Viewer"}
                   </dd>
                 </div>
 
@@ -217,12 +215,13 @@ export default function DashboardPage() {
             {/* Bloque placeholder para futuras tarjetas / gráficos */}
             <section className="bg-slate-100 rounded-2xl border border-dashed border-slate-300 p-6">
               <p className="text-sm font-medium text-slate-700 mb-1">
-                Zona de trabajo futura del dashboard
+                Contenido futuro del dashboard
               </p>
               <p className="text-sm text-slate-500">
-                Aquí más adelante puedes agregar tarjetas, gráficos o resúmenes
-                según el rol (proyectos, equipos, trabajadores, etc.). Por ahora
-                solo sirve como placeholder para ver el layout.
+                Aquí más adelante podrás agregar tarjetas, gráficos o resúmenes
+                según el rol del usuario (proyectos, equipos, trabajadores,
+                etc.). Por ahora solo sirve como placeholder para validar el
+                layout.
               </p>
             </section>
           </div>
@@ -239,22 +238,24 @@ export default function DashboardPage() {
 interface SidebarItemProps {
   label: string;
   active?: boolean;
+  icon?: ReactNode; // ícono opcional
 }
 
-function SidebarItem({ label, active = false }: SidebarItemProps) {
+function SidebarItem({ label, active = false, icon }: SidebarItemProps) {
   return (
     <button
       type="button"
-      className={`w-full flex items-center px-3 py-2 rounded-lg text-sm text-left transition
+      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-left transition
       ${
         active
-          ? // 💡 Estilo cuando el item está activo
-            "bg-slate-800 text-slate-50"
-          : // 💡 Estilo por defecto + hover
-            "text-slate-300 hover:bg-slate-800 hover:text-white"
+          ? "bg-slate-800 text-slate-50"
+          : "text-slate-300 hover:bg-slate-800 hover:text-white"
       }`}
     >
-      {/* Aquí podrías poner un icono a la izquierda */}
+      {/* Ícono a la izquierda (si existe) */}
+      {icon && <span className="flex-shrink-0">{icon}</span>}
+
+      {/* Texto */}
       <span className="truncate">{label}</span>
     </button>
   );
